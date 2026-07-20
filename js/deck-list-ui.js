@@ -115,6 +115,15 @@ const DeckListUI = {
     arts.appendChild(this.thumb(deck.fieldId, 'dcard__field'));
     card.appendChild(arts);
 
+    // 最終更新日時（公式デッキには出さない）
+    const stamp = DeckManager.updatedText(deck);
+    if (stamp) {
+      const time = document.createElement('div');
+      time.className = 'dcard__time';
+      time.textContent = '更新 ' + stamp;
+      card.appendChild(time);
+    }
+
     // 使えるかどうか（仕様書 11.5）
     const state = document.createElement('div');
     state.className = 'dcard__state';
@@ -168,6 +177,11 @@ const DeckListUI = {
   },
 
   renderView: function () {
+    // 編成から戻ってきたときは、保存された最新の中身を読み直します
+    if (this.viewing) {
+      const latest = DeckManager.byId(this.viewing.id);
+      if (latest) this.viewing = latest;
+    }
     const deck = this.viewing;
     if (!deck) return;
     const result = DeckValidator.check(deck);
@@ -180,6 +194,13 @@ const DeckListUI = {
     if (field) {
       field.innerHTML = '';
       field.appendChild(this.thumb(deck.fieldId, 'dview__fieldimg'));
+    }
+
+    // 最終更新日時
+    const stampBox = document.getElementById('deckview-time');
+    if (stampBox) {
+      const stamp = DeckManager.updatedText(deck);
+      stampBox.textContent = stamp ? '最終更新 ' + stamp : '公式デッキ';
     }
 
     // 枚数配分（仕様書 13.4）
@@ -257,8 +278,9 @@ const DeckListUI = {
   createNew: function () {
     const r = DeckManager.create(null, '新しいデッキ');
     if (!r.ok) { showToast(r.reason); return; }
-    showToast('デッキを作成しました。編成画面はまだ準備中です。');
     this.renderList();
+    // 作ったらそのまま編成へ進みます（作るだけで終わることはないため）
+    DeckEditorUI.open(r.deck.id, true);
   },
 
   copyViewing: function () {
@@ -270,7 +292,8 @@ const DeckListUI = {
   },
 
   editViewing: function () {
-    showToast('デッキ編成はまだ準備中です。');
+    if (!this.viewing || !DeckManager.isEditable(this.viewing)) return;
+    DeckEditorUI.open(this.viewing.id, false);
   },
 
   deleteViewing: function () {
