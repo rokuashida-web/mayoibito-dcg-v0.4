@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>マヨイビト v0.3</title>
+<link rel="stylesheet" href="css/layout.css?v=0.4.0">
+</head>
+<body>
+
+<!-- =====================================================================
+     Stage A：静的レイアウト確認用の画面
+     ---------------------------------------------------------------------
+     ・ゲームのルール処理には、まだ一切つないでいません
+     ・下の「調整パネル」で枚数や見え方を変えて確認できます
+     ・座標は 1080×1920 の設計座標をそのまま使い、
+       画面サイズに合わせて全体を等倍で縮小しています
+     ===================================================================== -->
+
+<div id="viewport">
+  <div id="stage">
+
+    <!-- ================= 盤面（斜め視点をかける層） ================= -->
+    <div id="board-plane">
+
+      <!-- --- コンベア風の追跡矢印（カードより後ろ・盤面背景より前：仕様書 21.2） --- -->
+      <svg id="pursuit-arrows" viewBox="0 0 1080 1920" preserveAspectRatio="none"></svg>
+
+      <!-- --- 相手の通常盤面：左＝相手の人間(5) / 右＝相手の怪異(6) --- -->
+      <div class="zone zone--opp-normal-human" id="opp-normal-human"></div>
+      <div class="zone zone--opp-normal-youkai" id="opp-normal-youkai"></div>
+
+      <!-- --- 相手の追跡カード：左＝追跡されている人間(8) / 右＝追跡している怪異(9) --- -->
+      <div class="zone zone--opp-track-human" id="opp-track-human"></div>
+      <div class="zone zone--opp-track-youkai" id="opp-track-youkai"></div>
+
+      <!-- --- 自分の追跡カード：左＝追跡している怪異(12) / 右＝追跡されている人間(13) --- -->
+      <div class="zone zone--self-track-youkai" id="self-track-youkai"></div>
+      <div class="zone zone--self-track-human" id="self-track-human"></div>
+
+      <!-- --- 自分の通常盤面：左＝自分の怪異(16) / 右＝自分の人間(17) --- -->
+      <div class="zone zone--self-normal-youkai" id="self-normal-youkai"></div>
+      <div class="zone zone--self-normal-human" id="self-normal-human"></div>
+
+    </div>
+
+    <!-- ================= 相手側の固定UI（画面上端） ================= -->
+    <div class="band band--top"></div>
+
+    <!-- 1 相手の簡略手札（裏向きの重ね＋枚数） -->
+    <div class="ui-box hand-mini hand-mini--opp" id="opp-hand-mini">
+      <div class="hand-mini__stack"></div>
+      <div class="hand-mini__count">0</div>
+    </div>
+
+    <!-- 2 相手のフィールドカード＋相手のロスト数 -->
+    <div class="ui-box field-box field-box--opp">
+      <div class="field-box__card"><span>フィールド</span></div>
+      <div class="field-box__lost"><span class="field-box__label">ロスト</span><span class="field-box__value">2 / 4</span></div>
+    </div>
+
+    <!-- 3 相手のトラッシュ -->
+    <div class="ui-box hexbtn hexbtn--opp-trash" id="btn-opp-trash"><span>トラッシュ 5</span></div>
+
+    <!-- 4 相手の気力数 -->
+    <div class="ui-box energy-box energy-box--opp">
+      <span class="energy-box__label">気力</span><span class="energy-box__value">4</span>
+    </div>
+
+    <!-- 7 相手の山札（枚数は常時表示） -->
+    <div class="ui-box deck-box deck-box--opp">
+      <div class="deck-box__count">残り 27枚</div>
+      <div class="deck-box__card"><span>山札</span></div>
+    </div>
+
+    <!-- ================= 自分側の固定UI（画面下端） ================= -->
+    <div class="band band--bottom"></div>
+
+    <!-- 10 設定（リタイアなど） -->
+    <div class="ui-box roundbtn" id="btn-settings"><span>設定</span></div>
+
+    <!-- 11 ログ（経過表示もこの先） -->
+    <div class="ui-box hexbtn hexbtn--log" id="btn-log"><span>ログ</span></div>
+
+    <!-- 14 メイン終了／対象確定 -->
+    <div class="ui-box hexbtn hexbtn--main" id="btn-main"><span>ターン終了</span></div>
+
+    <!-- 15 自分の山札（枚数は常時表示） -->
+    <div class="ui-box deck-box deck-box--self">
+      <div class="deck-box__count">残り 31枚</div>
+      <div class="deck-box__card"><span>山札</span></div>
+    </div>
+
+    <!-- 18 自分の気力数 -->
+    <div class="ui-box energy-box energy-box--self">
+      <span class="energy-box__label">気力</span><span class="energy-box__value">6</span>
+    </div>
+
+    <!-- 19 自分のトラッシュ -->
+    <div class="ui-box hexbtn hexbtn--self-trash" id="btn-self-trash"><span>トラッシュ 8</span></div>
+
+    <!-- 20 自分のフィールドカード＋自分のロスト数 -->
+    <div class="ui-box field-box field-box--self">
+      <div class="field-box__card"><span>フィールド</span></div>
+      <div class="field-box__lost"><span class="field-box__label">ロスト</span><span class="field-box__value">4 / 5</span></div>
+    </div>
+
+    <!-- 21 自分の簡略手札（タップで拡大手札へ） -->
+    <div class="ui-box hand-mini hand-mini--self" id="self-hand-mini">
+      <div class="hand-mini__stack"></div>
+      <div class="hand-mini__count">0</div>
+    </div>
+
+    <!-- ================= 自分の拡大手札（扇状・最前面） ================= -->
+    <div id="hand-fan" class="is-hidden"></div>
+
+    <!-- 追跡選択中の仮矢印（カードより前に出す：仕様書 21.3） -->
+    <svg id="drag-arrow" viewBox="0 0 1080 1920" preserveAspectRatio="none"></svg>
+
+    <!-- 決着の画面 -->
+    <div id="result-screen">
+      <div class="result">
+        <div class="result__phase"></div>
+        <div class="result__title"></div>
+        <div class="result__reason"></div>
+        <div class="result__table"></div>
+        <div class="result__info"></div>
+        <div class="result__notice"></div>
+        <div class="result__buttons"></div>
+        <textarea class="result__fallback" readonly rows="10"></textarea>
+      </div>
+    </div>
+
+    <!-- 対戦中メニュー（仕様書 21） -->
+    <div id="game-menu">
+      <div class="gmenu">
+        <div class="gmenu__title">メニュー</div>
+        <button type="button" class="gmenu__btn gmenu__btn--primary" id="gmenu-back">対戦へ戻る</button>
+        <button type="button" class="gmenu__btn" id="gmenu-howto">遊び方</button>
+        <button type="button" class="gmenu__btn" id="gmenu-settings">設定</button>
+        <button type="button" class="gmenu__btn gmenu__btn--warn" id="gmenu-retire">リタイア</button>
+      </div>
+    </div>
+
+    <!-- 不具合が起きたときの画面（仕様書 29） -->
+    <div id="error-screen">
+      <div class="error">
+        <div class="error__title">処理中にエラーが発生しました。</div>
+        <div class="error__lead">エラー情報をコピーして制作者へ送ってください。</div>
+        <div class="error__detail"></div>
+        <textarea class="error__fallback" readonly rows="8"></textarea>
+        <div class="error__buttons">
+          <button type="button" class="error__btn error__btn--primary" id="error-copy">エラー情報をコピー</button>
+          <button type="button" class="error__btn" id="error-back">モード選択へ戻る</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 読み込み中の表示（仕様書 30） -->
+    <div id="loading">
+      <div class="loading__box">
+        <div class="loading__text">読み込み中…</div>
+        <div class="loading__bar"><div class="loading__fill"></div></div>
+        <div class="loading__count"></div>
+      </div>
+    </div>
+
+    <!-- 初心者ガイド（仕様書 17） -->
+    <!-- CPU観戦の操作バー（仕様書 20.4） -->
+    <div id="watch-bar">
+      <button type="button" class="watch-bar__btn" id="watch-pause">一時停止</button>
+      <div class="watch-bar__speeds" id="watch-speeds">
+        <button type="button" class="watch-bar__speed" data-speed="normal">標準</button>
+        <button type="button" class="watch-bar__speed" data-speed="fast">高速</button>
+        <button type="button" class="watch-bar__speed" data-speed="veryfast">超高速</button>
+      </div>
+      <button type="button" class="watch-bar__btn watch-bar__btn--quit" id="watch-quit">観戦を終了</button>
+    </div>
+
+    <!-- CPU思考中の表示（仕様書 15.1） -->
+    <div id="cpu-thinking">CPU思考中…</div>
+
+    <!-- CPUが使うカードの一時公開（仕様書 14.3） -->
+    <div id="cpu-reveal">
+      <div class="cpu-reveal__box">
+        <div class="cpu-reveal__card"></div>
+        <div class="cpu-reveal__name"></div>
+      </div>
+    </div>
+
+    <!-- ターン交代のときに画面を暗くする幕 -->
+    <div id="dim-screen"></div>
+
+    <!-- ログ・トラッシュ・設定で使い回す画面 -->
+    <div id="sheet">
+      <div class="sheet">
+        <div class="sheet__title"></div>
+        <div class="sheet__body"></div>
+        <div class="sheet__buttons">
+          <button type="button" class="dlg__btn dlg__btn--primary" id="sheet-close">閉じる</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- =================================================================
+         メニュー画面（v0.3 で追加）
+         -----------------------------------------------------------------
+         タイトル・モード選択・各設定画面・遊び方・設定を、
+         同じ土台（#start-screen）の上で切り替えて表示します。
+         表示の切り替えは js/screens.js が行います。
+         ================================================================= -->
+    <div id="start-screen">
+
+      <!-- ---------- タイトル画面（仕様書 6） ---------- -->
+      <!-- ---------- スタート画面（v0.4 仕様書 5） ----------
+           起動直後はタイトルだけを見せます。
+           メニューを並べないのは、最初の一歩を迷わせないためです。 -->
+      <section class="menu menu--start" id="screen-start" data-screen="start">
+        <div class="start__logo">マヨイビト</div>
+        <div class="start__version" id="title-version"></div>
+        <div class="start__tap">タップしてスタート</div>
+      </section>
+
+      <!-- ---------- モード選択（v0.4 仕様書 6） ---------- -->
+      <section class="menu" id="screen-mode" data-screen="mode">
+        <button type="button" class="menu__corner" data-go="options">設定</button>
+        <div class="menu__title">マヨイビト</div>
+        <div class="menu__list">
+
+          <button type="button" class="menu__card" data-go="battle-mode">
+            <span class="menu__card-name">対戦</span>
+            <span class="menu__card-desc">CPU対戦や、ひとり回しができます。</span>
+          </button>
+
+          <button type="button" class="menu__card" data-go="card-mode">
+            <span class="menu__card-name">カード</span>
+            <span class="menu__card-desc">デッキ編成や所持カードの確認ができます。</span>
+          </button>
+
+          <button type="button" class="menu__card" data-go="howto">
+            <span class="menu__card-name">遊び方</span>
+            <span class="menu__card-desc">ルールと操作を確認できます。</span>
+          </button>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- 対戦モード選択（v0.4 仕様書 7） ---------- -->
+      <section class="menu" id="screen-battle-mode" data-screen="battle-mode">
+        <div class="menu__title">対戦</div>
+        <div class="menu__list">
+
+          <button type="button" class="menu__card menu__card--soon" data-soon="1">
+            <span class="menu__card-name">
+              <span class="menu__leaf">🌱</span>チュートリアル<span class="menu__tag">v0.5で追加</span>
+            </span>
+            <span class="menu__card-desc">基本編と実践編で、ルールと操作を順に学べます。</span>
+          </button>
+
+          <button type="button" class="menu__card" data-go="cpu-setup">
+            <span class="menu__card-name">CPU対戦</span>
+            <span class="menu__card-desc">CPUを相手に、ひとりで対戦します。まずは「弱」から。</span>
+          </button>
+
+          <button type="button" class="menu__card" data-go="solo-setup">
+            <span class="menu__card-name">ひとり回し</span>
+            <span class="menu__card-desc">1台の端末で両方のデッキを交互に操作します。</span>
+          </button>
+
+          <button type="button" class="menu__card" data-go="dev-mode">
+            <span class="menu__card-name">開発者用モード<span class="menu__tag">開発者向け</span></span>
+            <span class="menu__card-desc">CPU観戦などの検証用の機能です。</span>
+          </button>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- カードモード選択（v0.4 仕様書 8） ---------- -->
+      <section class="menu" id="screen-card-mode" data-screen="card-mode">
+        <div class="menu__title">カード</div>
+        <div class="menu__list">
+
+          <button type="button" class="menu__card" data-go="deck-list">
+            <span class="menu__card-name">デッキ一覧</span>
+            <span class="menu__card-desc">デッキの作成・確認・編集ができます。</span>
+          </button>
+
+          <button type="button" class="menu__card" data-go="card-list">
+            <span class="menu__card-name">カード一覧</span>
+            <span class="menu__card-desc">所持しているカードを一覧で確認できます。</span>
+          </button>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- 開発者用モード（v0.4 仕様書 7.3） ---------- -->
+      <section class="menu" id="screen-dev-mode" data-screen="dev-mode">
+        <div class="menu__title">開発者用モード</div>
+        <div class="menu__list">
+
+          <button type="button" class="menu__card" data-go="watch-setup">
+            <span class="menu__card-name">CPU観戦</span>
+            <span class="menu__card-desc">CPU同士の対戦を自動で観戦します。</span>
+          </button>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- デッキ一覧（v0.4 仕様書 11） ---------- -->
+      <section class="menu menu--wide" id="screen-deck-list" data-screen="deck-list">
+        <div class="listbar">
+          <button type="button" class="listbar__back" data-back="1">戻る</button>
+          <div class="listbar__title">デッキ一覧</div>
+          <div class="listbar__count" id="decklist-count"></div>
+        </div>
+
+        <div class="cardlist__scroll">
+          <div class="decklist" id="decklist-grid"></div>
+        </div>
+
+        <div class="dlfoot">
+          <div class="dlfoot__note" id="decklist-note"></div>
+          <button type="button" class="dlfoot__add" id="decklist-add">デッキ作成</button>
+        </div>
+      </section>
+
+      <!-- ---------- デッキ確認（v0.4 仕様書 13） ---------- -->
+      <section class="menu menu--wide" id="screen-deck-view" data-screen="deck-view">
+        <div class="listbar">
+          <button type="button" class="listbar__back" data-back="1">戻る</button>
+          <div class="listbar__title" id="deckview-title"></div>
+          <div class="listbar__count"></div>
+        </div>
+
+        <div class="cardlist__scroll">
+          <div class="dview__top">
+            <div class="dview__field" id="deckview-field"></div>
+            <div class="dview__counts" id="deckview-counts"></div>
+          </div>
+
+          <div class="dview__problems" id="deckview-problems"></div>
+
+          <div class="dview__grid" id="deckview-grid"></div>
+        </div>
+
+        <div class="dvfoot">
+          <button type="button" class="dvfoot__btn" id="deckview-edit">編集</button>
+          <button type="button" class="dvfoot__btn" id="deckview-copy">コピー</button>
+          <button type="button" class="dvfoot__btn" id="deckview-image">画像保存</button>
+          <button type="button" class="dvfoot__btn dvfoot__btn--danger" id="deckview-delete">削除</button>
+        </div>
+      </section>
+
+      <!-- ---------- カード一覧（v0.4 仕様書 16） ---------- -->
+      <section class="menu menu--wide" id="screen-card-list" data-screen="card-list">
+        <div class="listbar">
+          <button type="button" class="listbar__back" data-back="1">戻る</button>
+          <div class="listbar__title">カード一覧</div>
+          <div class="listbar__count" id="cardlist-count"></div>
+        </div>
+
+        <!-- カードを並べる場所。ここだけが縦に流れ、上下のバーは動かない -->
+        <div class="cardlist__scroll">
+          <div class="cardlist" id="cardlist-grid"></div>
+
+          <!-- フィールドは横向きなので、区切ってから4列で並べる -->
+          <div class="cardlist__sep" id="cardlist-sep">フィールド</div>
+          <div class="cardlist cardlist--field" id="cardlist-fields"></div>
+
+          <div class="cardlist__empty" id="cardlist-empty">
+            条件に合うカードがありません。
+          </div>
+        </div>
+
+        <div class="cltools">
+          <div class="cltools__searches">
+            <input type="text" class="cltools__search" id="cardlist-search"
+                   placeholder="カード名で探す" autocomplete="off">
+            <input type="text" class="cltools__search" id="cardlist-trait"
+                   placeholder="特徴で探す（例：制服）" autocomplete="off">
+          </div>
+
+          <div class="cltools__row cltools__row--c5">
+            <span class="cltools__label">種類</span>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="human">人間</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="youkai">怪異</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="goods">グッズ</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="event">イベント</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="field">フィールド</button>
+          </div>
+
+          <div class="cltools__row cltools__row--c6">
+            <span class="cltools__label">コスト</span>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="0">0</button>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="1">1</button>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="2">2</button>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="3">3</button>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="4">4</button>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="5">5以上</button>
+          </div>
+
+          <div class="cltools__row cltools__row--c5">
+            <span class="cltools__label">並び</span>
+            <button type="button" class="cltools__chip" data-sort="default">種類順</button>
+            <button type="button" class="cltools__chip" data-sort="costAsc">コスト小</button>
+            <button type="button" class="cltools__chip" data-sort="costDesc">コスト大</button>
+            <button type="button" class="cltools__chip" data-sort="name">名前順</button>
+            <button type="button" class="cltools__chip cltools__chip--clear" id="cardlist-clear">条件を消す</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- カードの拡大詳細（仕様書 16.3） ---------- -->
+      <div id="card-detail">
+        <div class="cdetail">
+          <img class="cdetail__img" alt="">
+          <div class="cdetail__body">
+            <div class="cdetail__name"></div>
+            <div class="cdetail__info"></div>
+            <div class="cdetail__effect"></div>
+          </div>
+          <button type="button" class="cdetail__close" id="cdetail-close">閉じる</button>
+        </div>
+      </div>
+
+      <!-- ---------- CPU対戦設定（仕様書 8〜13） ---------- -->
+      <section class="menu" id="screen-cpu-setup" data-screen="cpu-setup">
+        <div class="menu__title">CPU対戦</div>
+        <div class="menu__body">
+
+          <!-- 自分のデッキ -->
+          <div class="menu__section">
+            <div class="menu__label">自分のデッキ</div>
+            <div class="menu__choices" data-store="cpu" data-opt="playerDeck">
+              <button type="button" class="menu__choice" data-val="village">ヨマモリ村</button>
+              <button type="button" class="menu__choice" data-val="mansion">黒薔薇の館</button>
+            </div>
+          </div>
+
+          <!-- CPUのデッキ -->
+          <div class="menu__section">
+            <div class="menu__label">CPUのデッキ</div>
+            <div class="menu__choices" data-store="cpu" data-opt="cpuDeck">
+              <button type="button" class="menu__choice" data-val="village">ヨマモリ村</button>
+              <button type="button" class="menu__choice" data-val="mansion">黒薔薇の館</button>
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+            </div>
+            <div class="menu__hint" id="cpu-mirror-hint"></div>
+          </div>
+
+          <!-- CPU難易度 -->
+          <div class="menu__section">
+            <div class="menu__label">CPU難易度</div>
+            <div class="menu__choices menu__choices--diff" data-store="cpu" data-opt="difficulty">
+              <button type="button" class="menu__choice menu__choice--small" data-val="weak">弱</button>
+              <button type="button" class="menu__choice menu__choice--small" data-val="normal">中</button>
+              <button type="button" class="menu__choice menu__choice--small" data-val="strong">強</button>
+              <button type="button" class="menu__choice menu__choice--small" data-val="expert">エキスパート</button>
+              <button type="button" class="menu__choice menu__choice--small" data-val="unfair">理不尽</button>
+            </div>
+            <div class="menu__desc" id="cpu-diff-desc"></div>
+          </div>
+
+          <!-- 先攻・後攻 -->
+          <div class="menu__section">
+            <div class="menu__label">先攻・後攻</div>
+            <div class="menu__choices" data-store="cpu" data-opt="firstPlayer">
+              <button type="button" class="menu__choice" data-val="player">先攻</button>
+              <button type="button" class="menu__choice" data-val="cpu">後攻</button>
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+            </div>
+          </div>
+
+          <!-- シード -->
+          <div class="menu__section">
+            <div class="menu__label">シード</div>
+            <div class="menu__choices" data-store="cpu" data-opt="seedMode">
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+              <button type="button" class="menu__choice" data-val="fixed">指定する</button>
+            </div>
+            <input id="cpu-seed-input" type="text" inputmode="text"
+                   placeholder="例：MAYO-1A2B-3C4D" autocomplete="off">
+            <div class="menu__hint">同じシードなら、毎回同じ順番で山札が並びます。</div>
+          </div>
+
+          <div class="menu__error" id="cpu-setup-error"></div>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__go" id="cpu-start">対戦開始</button>
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- ひとり回し設定（仕様書 19.2） ---------- -->
+      <section class="menu" id="screen-solo-setup" data-screen="solo-setup">
+        <div class="menu__title">ひとり回し</div>
+        <div class="menu__body">
+
+          <div class="menu__note">
+            1台の端末で、両方のデッキを交互に操作します。<br>
+            ターンが変わるときに画面が暗くなるので、そのあいだに端末を渡してください。
+          </div>
+
+          <!-- プレイヤー1のデッキ -->
+          <div class="menu__section">
+            <div class="menu__label">プレイヤー1のデッキ</div>
+            <div class="menu__choices" data-store="solo" data-opt="deck1">
+              <button type="button" class="menu__choice" data-val="village">ヨマモリ村</button>
+              <button type="button" class="menu__choice" data-val="mansion">黒薔薇の館</button>
+            </div>
+          </div>
+
+          <!-- プレイヤー2のデッキ -->
+          <div class="menu__section">
+            <div class="menu__label">プレイヤー2のデッキ</div>
+            <div class="menu__choices" data-store="solo" data-opt="deck2">
+              <button type="button" class="menu__choice" data-val="village">ヨマモリ村</button>
+              <button type="button" class="menu__choice" data-val="mansion">黒薔薇の館</button>
+            </div>
+            <div class="menu__hint" id="solo-mirror-hint"></div>
+          </div>
+
+          <!-- 先攻 -->
+          <div class="menu__section">
+            <div class="menu__label">先攻</div>
+            <div class="menu__choices" data-store="solo" data-opt="firstPlayer">
+              <button type="button" class="menu__choice" data-val="deck1">プレイヤー1</button>
+              <button type="button" class="menu__choice" data-val="deck2">プレイヤー2</button>
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+            </div>
+          </div>
+
+          <!-- シード -->
+          <div class="menu__section">
+            <div class="menu__label">シード</div>
+            <div class="menu__choices" data-store="solo" data-opt="seedMode">
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+              <button type="button" class="menu__choice" data-val="fixed">指定する</button>
+            </div>
+            <input id="seed-input" type="text" inputmode="text"
+                   placeholder="例：MAYO-1A2B-3C4D" autocomplete="off">
+            <div class="menu__hint">同じシードなら、毎回同じ順番で山札が並びます。</div>
+          </div>
+
+          <div class="menu__error" id="solo-setup-error"></div>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__go" id="solo-start">対戦開始</button>
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- CPU観戦設定（仕様書 20.2） ---------- -->
+      <section class="menu" id="screen-watch-setup" data-screen="watch-setup">
+        <div class="menu__title">CPU観戦<span class="menu__tag">開発者向け</span></div>
+        <div class="menu__body">
+
+          <div class="menu__note">
+            CPU同士の対戦を自動で進めます。ゲームへの操作はできません。<br>
+            手札は、そのターンのCPUのものが画面下に表示されます。
+          </div>
+
+          <!-- CPU 1 -->
+          <div class="menu__group">
+            <div class="menu__group-title">CPU 1</div>
+            <div class="menu__section">
+              <div class="menu__label">使用デッキ</div>
+              <div class="menu__choices" data-store="watch" data-opt="deck1">
+                <button type="button" class="menu__choice" data-val="village">ヨマモリ村</button>
+                <button type="button" class="menu__choice" data-val="mansion">黒薔薇の館</button>
+              </div>
+            </div>
+            <div class="menu__section">
+              <div class="menu__label">難易度</div>
+              <div class="menu__choices menu__choices--diff" data-store="watch" data-opt="diff1">
+                <button type="button" class="menu__choice menu__choice--small" data-val="weak">弱</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="normal">中</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="strong">強</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="expert">エキスパート</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="unfair">理不尽</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- CPU 2 -->
+          <div class="menu__group">
+            <div class="menu__group-title">CPU 2</div>
+            <div class="menu__section">
+              <div class="menu__label">使用デッキ</div>
+              <div class="menu__choices" data-store="watch" data-opt="deck2">
+                <button type="button" class="menu__choice" data-val="village">ヨマモリ村</button>
+                <button type="button" class="menu__choice" data-val="mansion">黒薔薇の館</button>
+              </div>
+            </div>
+            <div class="menu__section">
+              <div class="menu__label">難易度</div>
+              <div class="menu__choices menu__choices--diff" data-store="watch" data-opt="diff2">
+                <button type="button" class="menu__choice menu__choice--small" data-val="weak">弱</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="normal">中</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="strong">強</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="expert">エキスパート</button>
+                <button type="button" class="menu__choice menu__choice--small" data-val="unfair">理不尽</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- 共通 -->
+          <div class="menu__section">
+            <div class="menu__label">先攻</div>
+            <div class="menu__choices" data-store="watch" data-opt="firstPlayer">
+              <button type="button" class="menu__choice" data-val="cpu1">CPU 1</button>
+              <button type="button" class="menu__choice" data-val="cpu2">CPU 2</button>
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+            </div>
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">シード</div>
+            <div class="menu__choices" data-store="watch" data-opt="seedMode">
+              <button type="button" class="menu__choice" data-val="random">ランダム</button>
+              <button type="button" class="menu__choice" data-val="fixed">指定する</button>
+            </div>
+            <input id="watch-seed-input" type="text" inputmode="text"
+                   placeholder="例：MAYO-1A2B-3C4D" autocomplete="off">
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">観戦速度</div>
+            <div class="menu__choices" data-store="watch" data-opt="speed">
+              <button type="button" class="menu__choice" data-val="normal">標準</button>
+              <button type="button" class="menu__choice" data-val="fast">高速</button>
+              <button type="button" class="menu__choice" data-val="veryfast">超高速</button>
+            </div>
+          </div>
+
+          <div class="menu__error" id="watch-setup-error"></div>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__go" id="watch-start">観戦開始</button>
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- 遊び方（仕様書 18） ---------- -->
+      <section class="menu" id="screen-howto" data-screen="howto">
+        <div class="menu__title">遊び方</div>
+        <div class="menu__body">
+          <div class="howto" id="howto-body"></div>
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+      <!-- ---------- 設定（仕様書 22） ---------- -->
+      <section class="menu" id="screen-options" data-screen="options">
+        <div class="menu__title">設定</div>
+        <div class="menu__body">
+
+          <div class="menu__section">
+            <div class="menu__label">CPUの行動速度</div>
+            <div class="menu__choices" data-store="settings" data-opt="cpuActionSpeed">
+              <button type="button" class="menu__choice" data-val="normal">標準</button>
+              <button type="button" class="menu__choice" data-val="fast">高速</button>
+            </div>
+            <div class="menu__hint">CPUが1手ずつ見せる速さです。</div>
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">演出の速さ</div>
+            <div class="menu__choices" data-store="settings" data-opt="animationSpeed">
+              <button type="button" class="menu__choice" data-val="normal">標準</button>
+              <button type="button" class="menu__choice" data-val="fast">高速</button>
+            </div>
+            <div class="menu__hint">カードの移動や文字表示の速さです。</div>
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">効果音</div>
+            <div class="menu__choices" data-store="settings" data-opt="seEnabled">
+              <button type="button" class="menu__choice" data-val="on">ON</button>
+              <button type="button" class="menu__choice" data-val="off">OFF</button>
+            </div>
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">効果音の音量</div>
+            <input type="range" id="se-volume" min="0" max="100" step="5" value="60">
+            <div class="menu__hint"><span id="se-volume-value">60</span>％　動かすと試聴音が鳴ります。</div>
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">左右の配置</div>
+            <div class="menu__choices" data-store="settings" data-opt="mirrorLanes">
+              <button type="button" class="menu__choice" data-val="on">左右を反転</button>
+              <button type="button" class="menu__choice" data-val="off">標準</button>
+            </div>
+          </div>
+
+          <div class="menu__section">
+            <div class="menu__label">設定を初期化</div>
+            <button type="button" class="menu__wide menu__wide--warn" id="opt-reset">設定を初期化</button>
+            <div class="menu__hint">この画面の設定を最初の状態へ戻します。対戦中の内容は消えません。</div>
+          </div>
+
+          <div class="menu__done" id="opt-done"></div>
+
+        </div>
+        <div class="menu__foot">
+          <button type="button" class="menu__back" data-back="1">戻る</button>
+        </div>
+      </section>
+
+    </div>
+
+    <!-- カードを選ぶ画面（効果でトラッシュや手札から選ぶとき） -->
+    <div id="picker">
+      <div class="pick">
+        <div class="pick__title"></div>
+        <div class="pick__message"></div>
+        <div class="pick__grid"></div>
+        <div class="pick__buttons"></div>
+      </div>
+    </div>
+
+    <!-- 盤面のカードを選ぶときの案内 -->
+    <div id="target-hint"></div>
+
+    <!-- 案内・確認ダイアログ（マリガン、警告、対象選択などに使う） -->
+    <div id="dialog">
+      <div class="dlg">
+        <div class="dlg__title"></div>
+        <div class="dlg__message"></div>
+        <div class="dlg__buttons"></div>
+      </div>
+    </div>
+
+    <!-- 画面中央の大きな文字（「追跡」「襲撃」：仕様書 20・21.4） -->
+    <div id="banner"><span></span></div>
+
+    <!-- イベント用の一時的なドロップ先（仕様書 18.3。ドラッグ中だけ出る） -->
+    <div id="event-drop" class="is-hidden"></div>
+
+    <!-- 移動演出の層。手札より後ろを通るものと、手札の上を通るものの2枚 -->
+    <div id="fly-layer"></div>
+    <div id="fly-layer-top"></div>
+
+    <!-- ドラッグ中のカードを乗せる層（最前面） -->
+    <div id="drag-layer"></div>
+
+    <!-- 短いお知らせ（ドロップ失敗の理由など） -->
+    <div id="toast"></div>
+
+    <!-- クイック詳細（画面左上・盤面を押し下げない重ね表示） -->
+    <div id="quick-detail"></div>
+
+    <!-- 拡大詳細（画面中央・背景操作を止める） -->
+    <div id="zoom-detail"></div>
+
+  </div>
+</div>
+
+<!-- 横向き警告 -->
+<div id="orientation-warning">端末を縦向きにしてください</div>
+
+<!-- =====================================================================
+     調整パネル（Stage A 専用。本実装では削除します）
+     ===================================================================== -->
+<button id="panel-toggle" type="button">調整</button>
+<div id="panel" class="is-closed">
+  <div class="panel__title">Stage A 調整パネル<span class="panel__note">（確認用・本番では消します）</span></div>
+
+  <div class="panel__group">
+    <div class="panel__head">盤面の枚数</div>
+    <label>自分の怪異 <input type="range" id="c-self-youkai" min="0" max="3" value="2"><span class="v">2</span></label>
+    <label>自分の人間 <input type="range" id="c-self-human" min="0" max="3" value="2"><span class="v">2</span></label>
+    <label>相手の怪異 <input type="range" id="c-opp-youkai" min="0" max="3" value="2"><span class="v">2</span></label>
+    <label>相手の人間 <input type="range" id="c-opp-human" min="0" max="3" value="2"><span class="v">2</span></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">追跡</div>
+    <label><input type="checkbox" id="t-self" checked> 自分の怪異 → 相手の人間</label>
+    <label><input type="checkbox" id="t-opp" checked> 相手の怪異 → 自分の人間</label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">ゲーム進行（Stage H）</div>
+    <label>シード <input type="text" id="panel-seed-input" placeholder="空欄なら自動" style="width:150px"></label>
+    <label><button type="button" id="btn-restart">はじめから</button></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">演出の確認</div>
+    <label><button type="button" id="btn-attack-demo">襲撃の演出を試す</button></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">手札</div>
+    <label>自分の枚数 <input type="range" id="c-hand" min="0" max="10" value="6"><span class="v">6</span></label>
+    <label>相手の枚数 <input type="range" id="c-opp-hand" min="0" max="10" value="5"><span class="v">5</span></label>
+    <label><input type="checkbox" id="hand-expanded"> 拡大表示にする</label>
+    <label>選択中 <input type="range" id="hand-selected" min="-1" max="9" value="-1"><span class="v">なし</span></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">見え方（仮の値）</div>
+    <label>遠近 perspective <input type="range" id="v-perspective" min="500" max="2400" step="50" value="850"><span class="v">850</span></label>
+    <label>盤面の傾き <input type="range" id="v-tilt" min="0" max="12" step="0.5" value="7"><span class="v">7</span></label>
+    <label>奥のカード縮小 <input type="range" id="v-far" min="70" max="100" value="90"><span class="v">0.90</span></label>
+    <label>場の高さ <input type="range" id="v-shift" min="0" max="200" value="75"><span class="v">75</span></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">手札の扇（3つは独立して効きます）</div>
+    <label>カード間隔 <input type="range" id="v-spacing" min="60" max="260" value="120"><span class="v">120</span></label>
+    <label>弧の深さ <input type="range" id="v-arc" min="0" max="200" value="30"><span class="v">30</span></label>
+    <label>端の傾き <input type="range" id="v-fan" min="0" max="45" value="20"><span class="v">20</span></label>
+    <label>手札の高さ <input type="range" id="v-bottom" min="0" max="340" value="90"><span class="v">90</span></label>
+    <label>選択時のせり出し <input type="range" id="v-fan-lift" min="0" max="140" value="35"><span class="v">35</span></label>
+    <label>選択時の拡大 <input type="range" id="v-fan-scale" min="100" max="140" value="114"><span class="v">1.14</span></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">現在値の表示位置（カード画像に重ねる数値）</div>
+    <label>大きさ <input type="range" id="v-ov-size" min="15" max="50" value="30"><span class="v">0.30</span></label>
+    <label>左位置 <input type="range" id="v-ov-left" min="0" max="300" value="0"><span class="v">0.000</span></label>
+    <label>すき間 <input type="range" id="v-ov-gap" min="0" max="40" value="0"><span class="v">0.00</span></label>
+    <label>下位置 <input type="range" id="v-ov-bottom" min="0" max="300" value="0"><span class="v">0.000</span></label>
+    <label>フィールド（自分） <input type="range" id="v-field-h" min="80" max="210" value="200"><span class="v">200</span></label>
+    <label>フィールド（相手） <input type="range" id="v-field-h-opp" min="80" max="210" value="180"><span class="v">180</span></label>
+  </div>
+
+  <div class="panel__group">
+    <div class="panel__head">表示</div>
+    <label><input type="checkbox" id="show-guides"> 領域の枠を表示</label>
+  </div>
+</div>
+
+<script src="js/cards.js?v=0.4.0"></script>
+<script src="js/decks.js?v=0.4.0"></script>
+<script src="js/random.js?v=0.4.0"></script>
+<script src="js/effects.js?v=0.4.0"></script>
+<script src="js/game.js?v=0.4.0"></script>
+<!-- CPU対戦のAI（v0.3で追加。読み込み順は ai-core → ai-heuristic → ai-deckstack → ai-player） -->
+<script src="js/ai-core.js?v=0.4.0"></script>
+<script src="js/ai-heuristic.js?v=0.4.0"></script>
+<script src="js/ai-deckstack.js?v=0.4.0"></script>
+<script src="js/ai-player.js?v=0.4.0"></script>
+<script src="js/ai-uiops.js?v=0.4.0"></script>
+<script src="js/card-images.js?v=0.4.0"></script>
+<script src="js/version.js?v=0.4.0"></script>
+<script src="js/events.js?v=0.4.0"></script>
+<script src="js/errors.js?v=0.4.0"></script>
+<script src="js/save-manager.js?v=0.4.0"></script>
+<script src="js/collection.js?v=0.4.0"></script>
+<script src="js/card-filter.js?v=0.4.0"></script>
+<script src="js/deck-validator.js?v=0.4.0"></script>
+<script src="js/deck-manager.js?v=0.4.0"></script>
+<script src="js/assets.js?v=0.4.0"></script>
+<script src="js/storage.js?v=0.4.0"></script>
+<script src="js/se.js?v=0.4.0"></script>
+<script src="js/howto.js?v=0.4.0"></script>
+<script src="js/card-list-ui.js?v=0.4.0"></script>
+<script src="js/deck-list-ui.js?v=0.4.0"></script>
+<script src="js/result.js?v=0.4.0"></script>
+<script src="js/screens.js?v=0.4.0"></script>
+<script src="js/cpu-driver.js?v=0.4.0"></script>
+<script src="js/preview.js?v=0.4.0"></script>
+</body>
+</html>
