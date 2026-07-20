@@ -220,8 +220,12 @@ console.log('\n■ 画面の作り（仕様書 16.1・30.3）');
     /\.cltools__row \{[\s\S]*?display: grid;/.test(css));
   check('種類の行は5列ぶんの幅を取る', /\.cltools__row--c5 \{ grid-template-columns: 108px repeat\(5, 1fr\); \}/.test(css));
   check('コストの行は6列ぶん', /\.cltools__row--c6 \{ grid-template-columns: 108px repeat\(6, 1fr\); \}/.test(css));
+  // 行が何種類あっても、見出しの幅がそろっていれば端がそろう
+  const rowDefs = css.match(/\.cltools__row--c\d \{ grid-template-columns: (\d+)px repeat/g) || [];
+  const widths = rowDefs.map(function (t) { return (t.match(/(\d+)px/) || [])[1]; });
   check('見出しの幅が同じなので行をまたいで端がそろう',
-    (css.match(/grid-template-columns: 108px repeat/g) || []).length === 2);
+    rowDefs.length >= 2 && new Set(widths).size === 1,
+    rowDefs.length + '種類の行、見出し幅 ' + Array.from(new Set(widths)).join('／') + 'px');
   check('並び替えが4種類ある', (block.match(/data-sort=/g) || []).length === 4);
   check('カードモードから行ける', html.indexOf('data-go="card-list"') !== -1);
 

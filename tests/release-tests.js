@@ -126,7 +126,7 @@ console.log('\n■ 遊べないモードが無いか（画面の行き先）');
   //   start     … 起動時
   //   mode      … スタート画面のタップ
   //   deck-view … デッキ一覧でデッキを押したとき（押す対象が動的に作られる）
-  const ROOTS = ['start', 'mode', 'deck-view'];
+  const ROOTS = ['start', 'mode', 'deck-view', 'deck-edit', 'field-select'];
   const unreachable = screens.filter(s => ROOTS.indexOf(s) === -1 && gos.indexOf(s) === -1);
   check('たどり着けない画面が無い', unreachable.length === 0, unreachable.join('／'));
 

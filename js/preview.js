@@ -3866,6 +3866,7 @@ function init() {
   Howto.build(document.getElementById('howto-body'));   // 遊び方の本文
   CardListUI.build();                                   // カード一覧（仕様書 16）
   DeckListUI.build();                                   // デッキ一覧・確認（仕様書 11・13）
+  DeckEditorUI.build();                                 // デッキ編成（仕様書 15）
   const cdClose = document.getElementById('cdetail-close');
   if (cdClose) cdClose.addEventListener('click', function () {
     Se.play('button');

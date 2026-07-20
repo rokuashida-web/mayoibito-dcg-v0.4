@@ -705,6 +705,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   flex-wrap: wrap;
 }
 .result__btn {
+  min-height: var(--tap);
   font-size: 30px;
   padding: 20px 34px;
   border-radius: 12px;
@@ -803,6 +804,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 .set__note { margin-top: 6px; font-size: 24px; color: #9fb0cc; }
 .set__choices { margin-top: 12px; display: flex; gap: 14px; flex-wrap: wrap; }
 .set__choice {
+  min-height: var(--tap);
   font-size: 28px;
   padding: 12px 24px;
   border-radius: 10px;
@@ -834,6 +836,218 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   filter: brightness(1.4) drop-shadow(0 0 28px rgba(255, 232, 160, 0.95));
   transition: transform 0.22s ease, filter 0.22s ease;
   z-index: 6;
+}
+
+/* =====================================================================
+   指で押せる大きさ（v0.4）
+   ---------------------------------------------------------------------
+   この画面は1080×1920で作り、実機ではそれを縮めて表示します。
+   iPhone(390pt幅)だと約0.36倍になるので、
+   押せる目安の44ptを満たすには、画面上で122px必要です。
+
+   小さいボタンは「押したのに反応しない」と感じさせるので、
+   見た目より当たりを優先します。
+   ===================================================================== */
+:root {
+  --tap: 122px;        /* 44pt 相当。単独で押すボタンの最低の高さ */
+  --tap-dense: 104px;  /* 38pt 相当。並べて出す絞り込みボタンなど */
+}
+
+/* =====================================================================
+   デッキ編成（v0.4・仕様書 15）
+   ===================================================================== */
+.dedit__name {
+  flex: 1;
+  min-height: var(--tap);
+  font-size: 32px;
+  padding: 12px 18px;
+  border-radius: 12px;
+  border: 2px solid var(--line);
+  background: #0e1524;
+  color: #e8eefc;
+  text-align: center;
+}
+.dedit__save {
+  min-height: var(--tap);
+  font-size: 28px;
+  padding: 14px 32px;
+  border-radius: 12px;
+  border: 3px solid #8fc0ff;
+  background: #2f4a7a;
+  color: #fff;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* 上段：フィールドと枚数配分 */
+.dedit__top {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 16px;
+  padding: 16px 20px 10px;
+}
+/* 40枠が1画面に収まるよう、上段は控えめにします。
+   40枚をスクロールさせると、いま何枚入っているかが
+   一目で分からなくなるためです。 */
+.dedit__field {
+  flex: 0 0 30%;
+  aspect-ratio: 1039 / 744;
+  border-radius: 10px;
+  overflow: hidden;
+  cursor: pointer;
+  position: relative;
+}
+.dedit__field img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dedit__field.is-empty {
+  background: #131b2c;
+  border: 3px dashed var(--line);
+  display: flex; align-items: center; justify-content: center;
+}
+.dedit__fieldhint { font-size: 22px; color: #93a7c6; text-align: center; padding: 10px; }
+
+.dedit__side { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
+.dedit__counts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.dedit__count {
+  display: flex; justify-content: space-between;
+  padding: 6px 12px;
+  border-radius: 8px;
+  background: rgba(19, 27, 44, 0.7);
+  border: 2px solid var(--line);
+  font-size: 22px;
+  color: #cfe0ff;
+}
+.dedit__count--total { grid-column: 1 / -1; border-color: #4f6a9e; font-weight: bold; }
+.dedit__state { font-size: 21px; color: #a9c6ef; line-height: 1.4; }
+.dedit__state.is-ng { color: #ffc9a0; }
+
+/* 中央：40枠（横8×縦5） */
+.dedit__gridwrap { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 6px 20px 10px; }
+.dedit__grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 7px;
+  border-radius: 10px;
+  padding: 6px;
+  border: 3px solid transparent;
+}
+.dedit__grid.is-target { border-color: #8fc0ff; background: rgba(47, 74, 122, 0.28); }
+
+.dslot {
+  position: relative;
+  aspect-ratio: 744 / 1039;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: none;
+}
+.dslot img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dslot.is-blank {
+  background: rgba(19, 27, 44, 0.5);
+  border: 2px dashed var(--line);
+  cursor: default;
+}
+.dslot.is-ace { outline: 4px solid #ffd36b; outline-offset: -4px; }
+.dslot.is-hero { outline: 3px solid #7ad1ff; outline-offset: -3px; }
+.dslot__lock {
+  position: absolute; left: 3px; top: 3px;
+  font-size: 17px; color: #04121e;
+  background: #7ad1ff; border-radius: 5px; padding: 1px 5px;
+}
+
+/* 下部：所持カードの帯 */
+.dband {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 12px 20px;
+  border-top: 2px solid var(--line);
+  border-bottom: 2px solid var(--line);
+  background: rgba(10, 14, 24, 0.9);
+}
+.dband.is-target { background: rgba(90, 36, 48, 0.5); }
+.dband__card {
+  position: relative;
+  flex: 0 0 auto;
+  width: 124px;
+  aspect-ratio: 744 / 1039;
+  border-radius: 6px;
+  overflow: hidden;
+  cursor: pointer;
+  touch-action: pan-x;
+}
+.dband__card img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.dband__card.is-full { opacity: 0.42; }
+.dband__num {
+  position: absolute; right: 2px; bottom: 2px;
+  font-size: 18px; font-weight: bold; color: #fff;
+  background: rgba(8, 12, 22, 0.9);
+  border: 2px solid #4f6a9e; border-radius: 6px;
+  padding: 0 5px;
+}
+
+.cltools--slim { padding: 12px 20px 16px; }
+
+/* ドラッグ中の影。transform だけを動かします */
+.dghost {
+  position: absolute;
+  left: 0; top: 0;
+  width: 124px;
+  pointer-events: none;
+  z-index: 183;
+  opacity: 0.82;
+  filter: drop-shadow(0 10px 18px rgba(0, 0, 0, 0.6));
+}
+.dghost img { width: 100%; display: block; border-radius: 6px; }
+body.is-deckdrag { cursor: grabbing; }
+
+/* フィールドの選択 */
+.fpick__grid { display: grid; grid-template-columns: 1fr; gap: 18px; }
+.fpick {
+  display: block; width: 100%; padding: 12px;
+  border-radius: 12px; border: 3px solid var(--line);
+  background: rgba(19, 27, 44, 0.8); cursor: pointer;
+}
+.fpick.is-on { border-color: #8fc0ff; background: #23324f; }
+.fpick img { width: 100%; border-radius: 8px; display: block; }
+.fpick__name { margin-top: 10px; font-size: 26px; color: #e8eefc; text-align: center; }
+.fpick__note { margin-top: 24px; font-size: 22px; color: #93a7c6; line-height: 1.6; text-align: center; }
+
+/* 編成中の拡大詳細 */
+#deck-edit-detail {
+  position: absolute; inset: 0;
+  display: none; align-items: center; justify-content: center;
+  background: rgba(0, 0, 0, 0.88);
+  z-index: 182; padding: 40px;
+}
+#deck-edit-detail.is-open { display: flex; }
+.dedetail { width: 100%; max-width: 760px; max-height: 100%; overflow-y: auto; text-align: center; }
+.dedetail__img { width: 56%; max-width: 430px; border-radius: 14px; display: block; margin: 0 auto; }
+.dedetail__name { margin-top: 20px; font-size: 36px; font-weight: bold; color: #eef4ff; }
+.dedetail__nums { margin-top: 12px; font-size: 25px; color: #cfe0ff; }
+.dedetail__effect {
+  display: none; margin-top: 16px; padding: 16px 20px;
+  border-radius: 12px; border: 2px solid var(--line);
+  background: rgba(19, 27, 44, 0.7);
+  font-size: 23px; line-height: 1.6; color: #e8eefc; text-align: left; white-space: pre-wrap;
+}
+.dedetail__effect.is-on { display: block; }
+.dedetail__why { display: none; margin-top: 14px; font-size: 22px; color: #ffd9a0; }
+.dedetail__why.is-on { display: block; }
+.dedetail__btns { margin-top: 22px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.dedetail__btn {
+  min-height: var(--tap);
+  font-size: 27px; padding: 16px 8px; border-radius: 12px;
+  border: 2px solid var(--line); background: #1a2338; color: #cfe0ff; cursor: pointer;
+}
+.dedetail__btn--primary { border-color: #8fc0ff; background: #2f4a7a; color: #fff; font-weight: bold; }
+.dedetail__btn.is-off { opacity: 0.35; cursor: default; }
+.dedetail__close {
+  min-height: var(--tap);
+  margin-top: 18px; font-size: 28px; padding: 16px 50px;
+  border-radius: 12px; border: 3px solid var(--line);
+  background: #141c2e; color: #e8eefc; cursor: pointer;
 }
 
 /* =====================================================================
@@ -876,7 +1090,8 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 .dcard__ace img, .dcard__field img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .dcard__ace.is-empty, .dcard__field.is-empty { background: #131b2c; border: 2px dashed var(--line); }
 
-.dcard__state { margin-top: 12px; font-size: 22px; color: #93a7c6; line-height: 1.4; }
+.dcard__time { margin-top: 10px; font-size: 20px; color: #7f92b0; }
+.dcard__state { margin-top: 8px; font-size: 22px; color: #93a7c6; line-height: 1.4; }
 .dcard--unusable .dcard__state { color: #ffb9a0; }
 .dcard__tag {
   position: absolute;
@@ -902,6 +1117,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 .dlfoot__note { flex: 1; font-size: 22px; color: #ffd9a0; display: none; }
 .dlfoot__note.is-on { display: block; }
 .dlfoot__add {
+  min-height: var(--tap);
   margin-left: auto;
   font-size: 30px;
   padding: 18px 46px;
@@ -915,6 +1131,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 .dlfoot__add.is-off { opacity: 0.4; border-color: var(--line); background: #1a2338; cursor: default; }
 
 /* --- デッキ確認（仕様書 13） --- */
+.dview__time { font-size: 22px; color: #7f92b0; margin-bottom: 14px; }
 .dview__top { display: flex; gap: 20px; align-items: flex-start; }
 .dview__field { flex: 0 0 38%; }
 .dview__fieldimg { width: 100%; aspect-ratio: 1039 / 744; border-radius: 10px; overflow: hidden; }
@@ -969,6 +1186,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   background: rgba(10, 14, 24, 0.95);
 }
 .dvfoot__btn {
+  min-height: var(--tap);
   font-size: 27px;
   padding: 18px 6px;
   border-radius: 12px;
@@ -1019,9 +1237,10 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   background: rgba(10, 14, 24, 0.92);
 }
 .listbar__back {
+  min-height: var(--tap);
+  padding: 14px 32px;
   font-size: 28px;
-  padding: 14px 28px;
-  border-radius: 12px;
+    border-radius: 12px;
   border: 2px solid var(--line);
   background: #1a2338;
   color: #cfe0ff;
@@ -1124,6 +1343,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 }
 .cltools__searches { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .cltools__search {
+  min-height: var(--tap);
   width: 100%;
   font-size: 28px;
   padding: 16px 18px;
@@ -1142,11 +1362,13 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   gap: 10px;
   margin-top: 12px;
 }
+.cltools__row--c4 { grid-template-columns: 108px repeat(4, 1fr); }
 .cltools__row--c5 { grid-template-columns: 108px repeat(5, 1fr); }
 .cltools__row--c6 { grid-template-columns: 108px repeat(6, 1fr); }
 
 .cltools__label { font-size: 24px; color: #93a7c6; text-align: left; }
 .cltools__chip {
+  min-height: var(--tap-dense);
   font-size: 24px;
   padding: 12px 4px;
   border-radius: 999px;
@@ -1205,6 +1427,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 }
 .cdetail__effect.is-on { display: block; }
 .cdetail__close {
+  min-height: var(--tap);
   margin-top: 28px;
   font-size: 32px;
   padding: 20px 60px;
@@ -1248,6 +1471,9 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 
 /* 設定など、端に固定して置くボタン（仕様書 6.1） */
 .menu__corner {
+  min-height: var(--tap);
+  display: flex;
+  align-items: center;
   position: absolute;
   top: 34px;
   left: 34px;
@@ -1287,6 +1513,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   letter-spacing: 0.1em;
 }
 .gmenu__btn {
+  min-height: var(--tap);
   display: block;
   width: 100%;
   margin-top: 22px;
@@ -1352,6 +1579,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 .error__fallback.is-on { display: block; }
 .error__buttons { margin-top: 30px; display: flex; flex-direction: column; gap: 18px; }
 .error__btn {
+  min-height: var(--tap);
   width: 100%;
   font-size: 34px;
   padding: 24px 10px;
@@ -1454,6 +1682,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   overflow: hidden;
 }
 .howto__head {
+  min-height: var(--tap);
   padding: 26px 26px;
   font-size: 36px;
   font-weight: bold;
@@ -1512,6 +1741,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 #watch-bar.is-on { display: flex; }
 
 .watch-bar__btn {
+  min-height: var(--tap);
   font-size: 30px;
   padding: 16px 28px;
   border-radius: 999px;
@@ -1528,6 +1758,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 
 .watch-bar__speeds { display: flex; gap: 10px; }
 .watch-bar__speed {
+  min-height: var(--tap);
   font-size: 26px;
   padding: 14px 20px;
   border-radius: 12px;
@@ -1700,6 +1931,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 }
 
 .menu__btn {
+  min-height: var(--tap);
   width: 100%;
   font-size: 44px;
   padding: 30px 10px;
@@ -1765,6 +1997,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   justify-content: center;
 }
 .menu__choice {
+  min-height: var(--tap);
   flex: 1 1 0;
   font-size: 38px;
   padding: 26px 10px;
@@ -1841,6 +2074,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 
 /* --- 設定画面の幅いっぱいのボタン --- */
 .menu__wide {
+  min-height: var(--tap);
   margin-top: 18px;
   width: 100%;
   font-size: 32px;
@@ -1914,6 +2148,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   gap: 22px;
 }
 .menu__go {
+  min-height: var(--tap);
   width: 100%;
   font-size: 44px;
   font-weight: bold;
@@ -1926,6 +2161,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 }
 .menu__go:disabled { opacity: 0.5; cursor: default; }
 .menu__back {
+  min-height: var(--tap);
   width: 100%;
   font-size: 34px;
   padding: 22px 10px;
@@ -2060,7 +2296,10 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
 #dialog {
   position: absolute;
   inset: 0;
-  z-index: 176;
+  /* メニュー階層（#start-screen は 180）より上に出します。
+     ここが下だと、デッキ一覧などの確認ダイアログが
+     画面の裏に隠れて押せなくなります（v0.4 Stage D の不具合）。 */
+  z-index: 184;
   display: none;
   align-items: center;
   justify-content: center;
@@ -2093,6 +2332,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   justify-content: center;
 }
 .dlg__btn {
+  min-height: var(--tap);
   min-width: 240px;
   padding: 18px 30px;
   font-size: 34px;
@@ -2190,7 +2430,9 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   left: 50%;
   bottom: 470px;
   transform: translateX(-50%);
-  z-index: 179;
+  /* メニュー階層（180）とダイアログ（184）より上。
+     ここが下だと、デッキ一覧などの短い知らせが画面の裏に隠れます。 */
+  z-index: 188;
   padding: 16px 30px;
   font-size: 32px;
   color: #fff;
@@ -2328,6 +2570,7 @@ body.show-guides .ui-box { outline: 1px dashed rgba(122, 209, 255, 0.5); }
   color: #e6ebf6;
 }
 .zd__close {
+  min-height: var(--tap);
   padding: 18px 56px;
   font-size: 36px;
   flex: 0 0 auto;

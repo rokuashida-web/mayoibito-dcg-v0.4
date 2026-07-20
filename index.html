@@ -345,6 +345,8 @@
         </div>
 
         <div class="cardlist__scroll">
+          <div class="dview__time" id="deckview-time"></div>
+
           <div class="dview__top">
             <div class="dview__field" id="deckview-field"></div>
             <div class="dview__counts" id="deckview-counts"></div>
@@ -362,6 +364,89 @@
           <button type="button" class="dvfoot__btn dvfoot__btn--danger" id="deckview-delete">削除</button>
         </div>
       </section>
+
+      <!-- ---------- デッキ編成（v0.4 仕様書 15） ---------- -->
+      <section class="menu menu--wide" id="screen-deck-edit" data-screen="deck-edit">
+        <div class="listbar">
+          <button type="button" class="listbar__back" id="deckedit-back">戻る</button>
+          <input type="text" class="dedit__name" id="deckedit-name" maxlength="16"
+                 placeholder="デッキ名" autocomplete="off">
+          <button type="button" class="dedit__save" id="deckedit-save">保存</button>
+        </div>
+
+        <!-- 上段：フィールドと枚数配分 -->
+        <div class="dedit__top">
+          <div class="dedit__field is-empty" id="deckedit-field"></div>
+          <div class="dedit__side">
+            <div class="dedit__counts" id="deckedit-counts"></div>
+            <div class="dedit__state" id="deckedit-state"></div>
+          </div>
+        </div>
+
+        <!-- 中央：40枠 -->
+        <div class="dedit__gridwrap">
+          <div class="dedit__grid" id="deckedit-grid"></div>
+        </div>
+
+        <!-- 下部：所持カードの帯（横スクロール） -->
+        <div class="dband" id="deckedit-band"></div>
+
+        <div class="cltools cltools--slim">
+          <div class="cltools__searches">
+            <input type="text" class="cltools__search" id="deckedit-search"
+                   placeholder="カード名で探す" autocomplete="off">
+            <input type="text" class="cltools__search" id="deckedit-trait"
+                   placeholder="特徴で探す" autocomplete="off">
+          </div>
+          <div class="cltools__row cltools__row--c4">
+            <span class="cltools__label">種類</span>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="human">人間</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="youkai">怪異</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="goods">グッズ</button>
+            <button type="button" class="cltools__chip" data-filter="type" data-val="event">イベント</button>
+          </div>
+          <div class="cltools__row cltools__row--c5">
+            <span class="cltools__label">並び</span>
+            <button type="button" class="cltools__chip" data-sort="default">種類順</button>
+            <button type="button" class="cltools__chip" data-sort="costAsc">コスト小</button>
+            <button type="button" class="cltools__chip" data-sort="costDesc">コスト大</button>
+            <button type="button" class="cltools__chip" data-sort="name">名前順</button>
+            <button type="button" class="cltools__chip" data-filter="cost" data-val="0">コスト0</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- フィールドの選択（v0.4 仕様書 10.3） ---------- -->
+      <section class="menu menu--wide" id="screen-field-select" data-screen="field-select">
+        <div class="listbar">
+          <button type="button" class="listbar__back" data-back="1">戻る</button>
+          <div class="listbar__title">フィールドを選ぶ</div>
+          <div class="listbar__count"></div>
+        </div>
+        <div class="cardlist__scroll">
+          <div class="fpick__grid" id="fieldpick-grid"></div>
+          <div class="fpick__note">
+            フィールドを変えると、対応する主人公が自動で入れかわります。<br>
+            そのほかのカードはそのまま残ります。
+          </div>
+        </div>
+      </section>
+
+      <!-- ---------- 編成中の拡大詳細（v0.4 仕様書 15.4） ---------- -->
+      <div id="deck-edit-detail">
+        <div class="dedetail">
+          <img class="dedetail__img" alt="">
+          <div class="dedetail__name"></div>
+          <div class="dedetail__nums"></div>
+          <div class="dedetail__effect"></div>
+          <div class="dedetail__why"></div>
+          <div class="dedetail__btns">
+            <button type="button" class="dedetail__btn" id="dedetail-remove">デッキから削除</button>
+            <button type="button" class="dedetail__btn dedetail__btn--primary" id="dedetail-add">デッキに追加</button>
+          </div>
+          <button type="button" class="dedetail__close" id="dedetail-close">とじる</button>
+        </div>
+      </div>
 
       <!-- ---------- カード一覧（v0.4 仕様書 16） ---------- -->
       <section class="menu menu--wide" id="screen-card-list" data-screen="card-list">
@@ -878,6 +963,7 @@
 <script src="js/howto.js?v=0.4.0"></script>
 <script src="js/card-list-ui.js?v=0.4.0"></script>
 <script src="js/deck-list-ui.js?v=0.4.0"></script>
+<script src="js/deck-editor-ui.js?v=0.4.0"></script>
 <script src="js/result.js?v=0.4.0"></script>
 <script src="js/screens.js?v=0.4.0"></script>
 <script src="js/cpu-driver.js?v=0.4.0"></script>

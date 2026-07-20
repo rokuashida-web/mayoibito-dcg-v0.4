@@ -178,6 +178,21 @@ const DeckManager = {
      表示のための計算
      ============================================================= */
 
+  /**
+   * 最終更新日時を読みやすい形にする。
+   * 公式デッキは更新という考えがないので空文字を返します。
+   */
+  updatedText: function (deck) {
+    if (!deck || deck.official) return '';
+    const raw = deck.updatedAt || deck.createdAt;
+    if (!raw) return '';
+    const d = new Date(raw);
+    if (isNaN(d.getTime())) return '';
+    const p = function (n) { return String(n).padStart(2, '0'); };
+    return d.getFullYear() + '/' + p(d.getMonth() + 1) + '/' + p(d.getDate()) +
+      ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+  },
+
   /** 一覧に出す代表画像（仕様書 15.7 の優先順位） */
   faceCardOf: function (deck) {
     if (!deck) return null;

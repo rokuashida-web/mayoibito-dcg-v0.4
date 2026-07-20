@@ -19,7 +19,7 @@ function wire(el) { el.classList._o = el; return el; }
 
 const layer = wire(makeEl());
 const secs = ['start','mode','battle-mode','card-mode','dev-mode',
-              'deck-list','deck-view','card-list','cpu-setup','solo-setup','watch-setup','howto','options']
+              'deck-list','deck-view','deck-edit','field-select','card-list','cpu-setup','solo-setup','watch-setup','howto','options']
   .map(function (n) { return wire(makeEl({ screen: n })); });
 layer.querySelectorAll = function () { return secs; };
 

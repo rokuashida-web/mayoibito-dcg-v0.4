@@ -227,6 +227,8 @@ const Screens = {
     if (name === 'card-list') CardListUI.render();
     if (name === 'deck-list') DeckListUI.renderList();
     if (name === 'deck-view') DeckListUI.renderView();
+    if (name === 'deck-edit') DeckEditorUI.render();
+    if (name === 'field-select') FieldPickerUI.render();
 
     // メニューが出ている間は盤面を操作させない
     if (typeof view !== 'undefined') view.locked = true;

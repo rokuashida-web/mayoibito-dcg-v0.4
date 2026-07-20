@@ -223,6 +223,25 @@ console.log('\n■ 代表画像の優先順位（仕様書 15.7）');
   check('どちらも無ければ null', D.faceCardOf(d) === null);
 }
 
+console.log('\n■ 最終更新日時（制作者の要望）');
+{
+  const { D } = boot();
+  const r = D.create(null, '日時テスト');
+  const t = D.updatedText(r.deck);
+  check('自作デッキに更新日時が出る', /^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}$/.test(t), t);
+  check('公式デッキには出さない', D.updatedText(D.officialDecks()[0]) === '');
+
+  // 編集すると新しくなる
+  const before = r.deck.updatedAt;
+  r.deck.name = '名前を変えた';
+  D.update(r.deck);
+  check('編集すると更新日時が変わる',
+    D.customDecks()[0].updatedAt >= before);
+  check('作成日時は残る', typeof D.customDecks()[0].createdAt === 'string');
+  check('壊れた日時でも落ちない',
+    D.updatedText({ id: 'x', updatedAt: 'こわれた' }) === '');
+}
+
 console.log('\n■ 画面の作り（仕様書 11・13・30.4）');
 {
   const html = fs.readFileSync('index.html', 'utf8');
@@ -250,6 +269,13 @@ console.log('\n■ 画面の作り（仕様書 11・13・30.4）');
     check('「' + k + '」ボタンがある', view.indexOf('deckview-' + k) !== -1);
   });
 
+  check('編集からデッキ編成へ進む（Stage E）',
+    ui.indexOf('DeckEditorUI.open(this.viewing.id, false)') !== -1);
+  check('新規作成後もそのまま編成へ進む',
+    ui.indexOf('DeckEditorUI.open(r.deck.id, true)') !== -1);
+  check('準備中の案内が残っていない',
+    ui.indexOf('準備中') === -1);
+
   check('公式では編集と削除を隠す（仕様書 13.6）',
     /\['deckview-edit', 'deckview-delete'\][\s\S]*?editable \? '' : 'none'/.test(ui));
   check('削除前に確認を出す（仕様書 13.7）',
@@ -265,6 +291,41 @@ console.log('\n■ 画面の作り（仕様書 11・13・30.4）');
     /COLS = 8, ROWS = 5/.test(ui));
   check('ファイル名に使えない文字を置き換える', ui.indexOf('imageFileName') !== -1 &&
     ui.indexOf("replace(") !== -1 && /safe = String\(deck\.name\)\.replace/.test(ui));
+
+  check('一覧に更新日時を出す', ui.indexOf('dcard__time') !== -1);
+  check('確認画面に更新日時を出す', view.indexOf('deckview-time') !== -1);
+
+  /* ★重なりの順（今回の不具合の再発防止）
+     確認ダイアログとお知らせが、メニュー階層より上に出ること。
+     下だと画面の裏に隠れて、削除などの操作ができなくなる。 */
+  const z = function (sel) {
+    const m = css.match(new RegExp(sel.replace(/[#.]/g, '\\$&') + '\\s*\\{[^}]*?z-index:\\s*(\\d+)', 's'));
+    return m ? Number(m[1]) : null;
+  };
+  const menuZ = z('#start-screen');
+  check('確認ダイアログがメニューより上', z('#dialog') > menuZ,
+    '#dialog ' + z('#dialog') + ' > #start-screen ' + menuZ);
+  check('お知らせがメニューより上', z('#toast') > menuZ,
+    '#toast ' + z('#toast') + ' > #start-screen ' + menuZ);
+  check('カードの拡大詳細もメニューより上', z('#card-detail') > menuZ);
+  check('エラー画面がいちばん上', z('#error-screen') > z('#toast'));
+
+  /* ★指で押せる大きさ（制作者の指摘）
+     1080px幅の画面をスマホでは約0.36倍で出すので、
+     44pt に届くには 122px 必要。 */
+  check('押せる大きさの基準が定義されている', /--tap:\s*122px/.test(css));
+  const noMin = [];
+  css.replace(/\n(\.[\w_-]+(?:__[\w-]+)?(?:--[\w-]+)?)\s*\{([^}]*)\}/g, function (all, sel, body) {
+    if (body.indexOf('cursor: pointer') === -1) return all;
+    if (body.indexOf('min-height') !== -1) return all;
+    const fs = body.match(/font-size:\s*([\d.]+)px/);
+    if (!fs) return all;
+    const pd = body.match(/padding:\s*([\d.]+)px/);
+    const h = Number(fs[1]) * 1.2 + (pd ? Number(pd[1]) * 2 : 0);
+    if (h < 122 && sel !== '.field-box__card') noMin.push(sel + '(' + Math.round(h) + 'px)');
+    return all;
+  });
+  check('小さすぎるボタンが残っていない', noMin.length === 0, noMin.join('／'));
 }
 
 console.log('\n' + (fail === 0

@@ -78,6 +78,8 @@ console.log('\n■ カードモード選択（仕様書 8・30.1）');
     b.indexOf('data-go="card-list"') !== -1);
   check('デッキ一覧も使えるようになった（Stage D）',
     b.indexOf('data-go="deck-list"') !== -1);
+  check('準備中の項目はもう残っていない（Stage E で編成も完成）',
+    b.indexOf('data-soon') === -1);
 }
 
 console.log('\n■ 開発者用モード（仕様書 7.3）');
